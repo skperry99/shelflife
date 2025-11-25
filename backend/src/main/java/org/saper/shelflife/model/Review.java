@@ -26,6 +26,7 @@ public class Review {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "session_id", nullable = false, updatable = false)
     private Long id; // review_id
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

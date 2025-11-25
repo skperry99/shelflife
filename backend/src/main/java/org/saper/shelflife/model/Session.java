@@ -19,6 +19,7 @@ public class Session {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "session_id", nullable = false, updatable = false)
     private Long id; // session_id
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -56,6 +57,4 @@ public class Session {
     public void onUpdate() {
         this.updatedAt = Instant.now();
     }
-
-    // getters/setters
 }

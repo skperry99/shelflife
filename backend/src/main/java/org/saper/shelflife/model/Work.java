@@ -20,9 +20,9 @@ import java.util.List;
         })
 public class Work {
 
-    // getters/setters
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "work_id", nullable = false, updatable = false)
     private Long id; // maps to work_id
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
