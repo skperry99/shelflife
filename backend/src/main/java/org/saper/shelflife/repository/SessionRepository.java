@@ -5,6 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface SessionRepository extends JpaRepository<Session,Long> {
-    List<Session> findByWorkIdAndUserId(Long workId, Long userId);
+public interface SessionRepository extends JpaRepository<Session, Long> {
+
+    List<Session> findByUserId(Long userId);
+
+    List<Session> findByUserIdAndWorkId(Long userId, Long workId);
 }
