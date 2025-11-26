@@ -1,0 +1,384 @@
+/* ============================================
+   SHELFLIFE DESIGN SYSTEM
+   Cozy Library • Warm Neutrals • Bookish Type
+   ============================================ */
+
+/* ---------- 0) Reset-ish & Base ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-text-main);
+  background-color: var(--color-page-bg);
+}
+
+/* ---------- 1) Color Tokens ---------- */
+
+:root {
+  /* Page & surfaces */
+  --color-page-bg: #f5f0e8; /* warm paper background */
+  --color-page-alt: #ece1d3; /* subtle contrast panels */
+
+  --color-panel: #ffffff; /* main cards/panels */
+  --color-panel-soft: #f8f3eb;
+
+  /* Shelf board */
+  --color-shelf-board: #e4d7c5;
+  --color-shelf-edge: #c9b79c;
+
+  /* Text */
+  --color-text-main: #2b2621;
+  --color-text-muted: #6b6258;
+  --color-text-soft: #9a8f82;
+  --color-text-on-accent: #ffffff;
+
+  /* Accents */
+  --color-accent-forest: #23423d; /* headings, primary actions */
+  --color-accent-gold: #c89b3c; /* highlights, progress */
+  --color-accent-rust: #8b3a3a; /* warnings / important labels */
+
+  /* Borders & lines */
+  --color-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-border-strong: rgba(0, 0, 0, 0.12);
+
+  /* Status colors */
+  --color-pill-to-explore-bg: #e2ecf6;
+  --color-pill-to-explore-text: #1f3a56;
+
+  --color-pill-in-progress-bg: #f7ebcf;
+  --color-pill-in-progress-text: #7a5a19;
+
+  --color-pill-finished-bg: #e4f2e6;
+  --color-pill-finished-text: #27623b;
+
+  /* Type chips */
+  --color-pill-type-book-bg: #e1efe9;
+  --color-pill-type-book-text: #23423d;
+
+  --color-pill-type-movie-bg: #e5e3f4;
+  --color-pill-type-movie-text: #433277;
+
+  --color-pill-type-game-bg: #f5e2ee;
+  --color-pill-type-game-text: #7b325f;
+
+  /* Focus & selection */
+  --color-focus-ring: #23423d;
+  --color-selection-bg: #d9c49a;
+}
+
+/* ---------- 2) Typography ---------- */
+
+:root {
+  --font-body: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  --font-heading: "Merriweather", "Georgia", "Times New Roman", serif;
+
+  --font-size-xs: 0.75rem; /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-md: 1rem; /* 16px */
+  --font-size-lg: 1.25rem; /* 20px */
+  --font-size-xl: 1.5rem; /* 24px */
+
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+}
+
+body {
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-heading);
+  color: var(--color-accent-forest);
+  margin: 0 0 0.35em;
+  line-height: var(--line-height-tight);
+}
+
+h1 {
+  font-size: 1.75rem;
+}
+
+h2 {
+  font-size: 1.3rem;
+}
+
+h3 {
+  font-size: 1.1rem;
+}
+
+/* Paragraphs & small text */
+
+p {
+  margin: 0 0 0.75rem;
+}
+
+.small-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* Text selection */
+
+::selection {
+  background: var(--color-selection-bg);
+  color: var(--color-text-main);
+}
+
+/* ---------- 3) Spacing, Radius, Shadows ---------- */
+
+:root {
+  --space-2xs: 0.25rem; /* 4px */
+  --space-xs: 0.5rem; /* 8px */
+  --space-sm: 0.75rem; /* 12px */
+  --space-md: 1rem; /* 16px */
+  --space-lg: 1.5rem; /* 24px */
+  --space-xl: 2rem; /* 32px */
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  --shadow-soft: 0 8px 18px rgba(0, 0, 0, 0.08);
+  --shadow-lifted: 0 10px 22px rgba(0, 0, 0, 0.14);
+
+  --transition-fast: 120ms ease-out;
+  --transition-normal: 180ms ease-out;
+}
+
+/* Layout helpers */
+
+.page-width {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: var(--space-lg) var(--space-md);
+}
+
+/* Stack utilities */
+
+.u-stack-xs > * + * {
+  margin-top: var(--space-xs);
+}
+
+.u-stack-sm > * + * {
+  margin-top: var(--space-sm);
+}
+
+.u-stack-md > * + * {
+  margin-top: var(--space-md);
+}
+
+.u-stack-lg > * + * {
+  margin-top: var(--space-lg);
+}
+
+/* ---------- 4) Buttons ---------- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--color-accent-forest);
+  color: var(--color-text-on-accent);
+  box-shadow: var(--shadow-soft);
+  transition: background var(--transition-normal),
+    box-shadow var(--transition-normal), transform var(--transition-fast);
+}
+
+.button:hover {
+  background: #2a514a;
+  box-shadow: var(--shadow-lifted);
+  transform: translateY(-1px);
+}
+
+.button:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-soft);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.button--subtle {
+  background: var(--color-panel-soft);
+  color: var(--color-text-main);
+  border-color: var(--color-border-subtle);
+  box-shadow: none;
+}
+
+.button--ghost {
+  background: transparent;
+  color: var(--color-accent-forest);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* ---------- 5) Cards & Panels ---------- */
+
+.panel {
+  background: var(--color-panel);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.panel--soft {
+  background: var(--color-panel-soft);
+}
+
+.card {
+  background: var(--color-panel);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-subtle);
+}
+
+/* ---------- 6) Pills / Badges ---------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.badge--type-book {
+  background: var(--color-pill-type-book-bg);
+  color: var(--color-pill-type-book-text);
+}
+
+.badge--type-movie {
+  background: var(--color-pill-type-movie-bg);
+  color: var(--color-pill-type-movie-text);
+}
+
+.badge--type-game {
+  background: var(--color-pill-type-game-bg);
+  color: var(--color-pill-type-game-text);
+}
+
+.badge--status-to-explore {
+  background: var(--color-pill-to-explore-bg);
+  color: var(--color-pill-to-explore-text);
+}
+
+.badge--status-in-progress {
+  background: var(--color-pill-in-progress-bg);
+  color: var(--color-pill-in-progress-text);
+}
+
+.badge--status-finished {
+  background: var(--color-pill-finished-bg);
+  color: var(--color-pill-finished-text);
+}
+
+/* ---------- 7) Form Controls ---------- */
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-subtle);
+  background-color: var(--color-panel);
+  font: inherit;
+  color: var(--color-text-main);
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast), background-color var(--transition-fast);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--color-accent-forest);
+  box-shadow: 0 0 0 2px rgba(35, 66, 61, 0.18);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-text-soft);
+}
+
+.field-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  color: var(--color-text-main);
+}
+
+.field-help {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---------- 8) Shell Layout (Header / Main) ---------- */
+
+.app-shell {
+  min-height: 100vh;
+  background: radial-gradient(
+    circle at top left,
+    #f8f3eb 0,
+    #f5f0e8 40%,
+    #efe4d7 100%
+  );
+}
+
+.app-header {
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: linear-gradient(180deg, #f9f4ec, #f3e8d9);
+}
+
+.app-main {
+  padding: var(--space-lg) var(--space-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+a {
+  color: var(--color-accent-forest);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
