@@ -5,5 +5,6 @@ public record ReviewCreateUpdateDto(
         Integer rating,
         String title,
         String body,
-        boolean privateReview
-) {}
+        boolean isPrivate
+) {
+}

@@ -26,7 +26,7 @@ public class Review {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "session_id", nullable = false, updatable = false)
+    @Column(name = "review_id", nullable = false, updatable = false)
     private Long id; // review_id
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -57,10 +57,17 @@ public class Review {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @PrePersist
+    public void onCreate() {
+        Instant now = Instant.now();
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        updatedAt = now;
+    }
+
     @PreUpdate
     public void onUpdate() {
         this.updatedAt = Instant.now();
     }
-
-    // getters/setters
 }

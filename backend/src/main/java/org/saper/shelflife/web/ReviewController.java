@@ -1,3 +1,4 @@
+// backend/src/main/java/org/saper/shelflife/web/ReviewController.java
 package org.saper.shelflife.web;
 
 import org.saper.shelflife.dto.ReviewCreateUpdateDto;
@@ -9,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/reviews")
+@RequestMapping("/api")
 @CrossOrigin(origins = "http://localhost:5173") // adjust as needed
 public class ReviewController {
 
@@ -24,43 +25,69 @@ public class ReviewController {
         return 1L;
     }
 
+    // ---------- Review collection endpoints ----------
+
     // GET /api/reviews  -> all reviews for current user
-    @GetMapping
+    @GetMapping("/reviews")
     public ResponseEntity<List<ReviewDto>> getReviews() {
         Long userId = getCurrentUserId();
         List<ReviewDto> reviews = reviewService.getReviewsForUser(userId);
         return ResponseEntity.ok(reviews);
     }
 
-    // GET /api/reviews/{id}
-    @GetMapping("/{id}")
+    // GET /api/reviews/{id} -> single review by id (must belong to current user)
+    @GetMapping("/reviews/{id}")
     public ResponseEntity<ReviewDto> getReview(@PathVariable Long id) {
         Long userId = getCurrentUserId();
         ReviewDto dto = reviewService.getReviewById(userId, id);
         return ResponseEntity.ok(dto);
     }
 
-    // GET /api/reviews/work/{workId} -> current user's review for that work
-    @GetMapping("/work/{workId}")
-    public ResponseEntity<ReviewDto> getReviewForWork(@PathVariable Long workId) {
-        Long userId = getCurrentUserId();
-        ReviewDto dto = reviewService.getReviewForWork(userId, workId);
-        return ResponseEntity.ok(dto);
-    }
-
-    // POST /api/reviews  (upsert by user + work)
-    @PostMapping
-    public ResponseEntity<ReviewDto> upsertReview(@RequestBody ReviewCreateUpdateDto dto) {
-        Long userId = getCurrentUserId();
-        ReviewDto saved = reviewService.upsertReview(userId, dto);
-        return ResponseEntity.ok(saved);
-    }
-
     // DELETE /api/reviews/{id}
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/reviews/{id}")
     public ResponseEntity<Void> deleteReview(@PathVariable Long id) {
         Long userId = getCurrentUserId();
         reviewService.deleteReview(userId, id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ---------- Work-scoped endpoints (match frontend) ----------
+
+    /**
+     * GET /api/works/{workId}/review
+     * <p>
+     * Returns either a ReviewDto or null if the user hasn't reviewed this work yet.
+     * Your frontend already handles "no review yet" gracefully.
+     */
+    @GetMapping("/works/{workId}/review")
+    public ResponseEntity<ReviewDto> getReviewForWork(@PathVariable Long workId) {
+        Long userId = getCurrentUserId();
+        ReviewDto dto = reviewService.getReviewForWorkOrNull(userId, workId);
+        return ResponseEntity.ok(dto); // 200 with null is fine
+    }
+
+    /**
+     * PUT /api/works/{workId}/review
+     * <p>
+     * Upserts the current user's review for this work. Great for a future "Save review" form.
+     */
+    @PutMapping("/works/{workId}/review")
+    public ResponseEntity<ReviewDto> upsertReviewForWork(
+            @PathVariable Long workId,
+            @RequestBody ReviewCreateUpdateDto body
+    ) {
+        Long userId = getCurrentUserId();
+
+        // Ensure path and body workId can't drift apart
+        ReviewCreateUpdateDto dto = new ReviewCreateUpdateDto(
+                workId,
+                body.rating(),
+                body.title(),
+                body.body(),
+                body.isPrivate()
+        );
+
+        ReviewDto saved = reviewService.upsertReview(userId, dto);
+        return ResponseEntity.ok(saved);
     }
 }
