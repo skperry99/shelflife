@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getAllWorks } from "../api/works.js";
 
-// Temporary fake data until we hook up the API.
+// Temporary fake data until we hook up the API / or when backend is down.
 const SAMPLE_WORKS = [
   // 1) Book Sarah finished
   {
@@ -99,21 +99,24 @@ const SAMPLE_WORKS = [
   },
 ];
 
-// Optional flag: set VITE_USE_FAKE_WORKS="true" to force sample-only mode.
+// Optional flag: set VITE_USE_FAKE_WORKS="true" in .env to *force* sample-only mode.
 const USE_FAKE_ONLY =
   import.meta.env.VITE_USE_FAKE_WORKS &&
   import.meta.env.VITE_USE_FAKE_WORKS.toLowerCase() === "true";
 
 export function useAllWorks() {
+  // Start with sample data so the Library has something to show immediately.
   const [works, setWorks] = useState(SAMPLE_WORKS);
   const [loading, setLoading] = useState(!USE_FAKE_ONLY);
   const [error, setError] = useState(null);
+  const [source, setSource] = useState("sample"); // "sample" | "api"
 
   useEffect(() => {
     if (USE_FAKE_ONLY) {
       // Stay on sample data; never call the backend.
       setLoading(false);
       setError(null);
+      setSource("sample");
       return;
     }
 
@@ -126,8 +129,24 @@ export function useAllWorks() {
 
         const data = await getAllWorks();
 
-        if (!cancelled && Array.isArray(data)) {
-          setWorks(data);
+        if (cancelled) return;
+
+        // Handle either: [ ... ] or { content: [ ... ] } (Spring pageable)
+        const items = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.content)
+          ? data.content
+          : null;
+
+        if (items) {
+          setWorks(items);
+          setSource("api");
+        } else {
+          console.warn(
+            "getAllWorks returned an unexpected shape; keeping sample data.",
+            data
+          );
+          setSource("sample");
         }
       } catch (err) {
         if (!cancelled) {
@@ -136,6 +155,7 @@ export function useAllWorks() {
             err
           );
           setError(err.message || "Could not load library from the server.");
+          setSource("sample");
         }
       } finally {
         if (!cancelled) {
@@ -149,7 +169,11 @@ export function useAllWorks() {
     return () => {
       cancelled = true;
     };
+
+    // USE_FAKE_ONLY and getAllWorks are effectively static at runtime,
+    // so it's safe to run this effect only once on mount.
+     
   }, []);
 
-  return { works, loading, error };
+  return { works, loading, error, source };
 }

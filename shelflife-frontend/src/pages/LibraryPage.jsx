@@ -24,17 +24,15 @@ export default function LibraryPage() {
       title="My Library"
       subtitle="Your current reads, future picks, and finished stories."
     >
-      <section className="library u-stack-lg">
+      <section className="library u-stack-lg" aria-busy={loading}>
         {/* Loading / error indicators */}
         {loading && (
           <p className="small-text">Loading your library from the server…</p>
         )}
 
         {error && (
-          <div className="panel panel--soft">
-            <p className="small-text" style={{ color: "#8b3a3a" }}>
-              {error}
-            </p>
+          <div className="panel panel--soft panel--error" role="status">
+            <p className="small-text">{error}</p>
             <p className="small-text">
               Showing sample data while the server is unavailable.
             </p>
