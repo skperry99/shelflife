@@ -71,9 +71,25 @@ public class Work {
     @OneToMany(mappedBy = "work", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews = new ArrayList<>();
 
+    @PrePersist
+    public void onCreate() {
+        Instant now = Instant.now();
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        updatedAt = now;
+
+        // Defensive defaults in case something tried to persist nulls
+        if (type == null) {
+            type = WorkType.BOOK;
+        }
+        if (status == null) {
+            status = WorkStatus.TO_EXPLORE;
+        }
+    }
+
     @PreUpdate
     public void onUpdate() {
         this.updatedAt = Instant.now();
     }
-
 }

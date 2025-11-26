@@ -3,6 +3,9 @@ package org.saper.shelflife.dto;
 import org.saper.shelflife.model.WorkStatus;
 import org.saper.shelflife.model.WorkType;
 
+/**
+ * Lightweight summary used for library shelves / list views.
+ */
 public record WorkSummaryDto(
         Long id,
         String title,
@@ -10,4 +13,5 @@ public record WorkSummaryDto(
         WorkType type,
         String genre,
         WorkStatus status
-) {}
+) {
+}
