@@ -36,8 +36,7 @@ export default defineConfig([
     rules: {
       // Ignore ALL_CAPS / PascalCase "unused" (often components / constants)
       "no-unused-vars": ["error", { varsIgnorePattern: "^[A-Z_]" }],
-      // Add/tweak react rules here if you want later, e.g.:
-      // "react/prop-types": "off",
+      "react/prop-types": "off",
     },
     settings: {
       react: {
@@ -61,7 +60,6 @@ export default defineConfig([
       globals: globals.node,
     },
     rules: {
-      // Slightly softer here if you like
       "no-unused-vars": ["warn", { varsIgnorePattern: "^[A-Z_]" }],
     },
   },
