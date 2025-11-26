@@ -1,12 +1,14 @@
+---
+
 # ShelfLife Backend 📚
 
 Spring Boot API for **ShelfLife**, a cozy reading & media journal where users track works (books, movies, games), log sessions, and write reviews.
 
 This service exposes REST endpoints for:
 
-- Managing a user’s **personal library** (`/api/works`)
-- Logging **sessions** (reading/watching time) per work (`/api/works/{id}/sessions`, `/api/sessions/{sessionId}`)
-- Creating and viewing **reviews** per work (`/api/works/{id}/review`, `/api/reviews`)
+* Managing a user’s **personal library** (`/api/works`)
+* Logging **sessions** (reading/watching time) per work (`/api/sessions?workId=...`, `/api/sessions/{id}`)
+* Creating and viewing **reviews** per work (`/api/reviews/work/{workId}`, `/api/reviews`)
 
 The frontend (Vite + React) talks to this backend over JSON.
 
@@ -14,11 +16,11 @@ The frontend (Vite + React) talks to this backend over JSON.
 
 ## Tech Stack
 
-- **Java** 17 (or your configured version)
-- **Spring Boot** (Web, Data JPA, Validation)
-- **MySQL 8+** (relational database)
-- **Maven** build (`mvnw` wrapper recommended)
-- (Planned) **Spring Security** + JWT or session-based auth
+* **Java 21**
+* **Spring Boot** (Web MVC, Data JPA, Validation, Actuator)
+* **MySQL 8+** (relational database)
+* **Maven** (`mvnw` wrapper recommended)
+* (Planned) **Spring Security** + JWT or session-based auth
 
 ---
 
@@ -37,7 +39,7 @@ shelflife/
     shelflife-frontend/
       src/
       package.json
-````
+```
 
 Inside `shelflife-backend` you’ll have the usual Spring Boot layout:
 
@@ -45,7 +47,10 @@ Inside `shelflife-backend` you’ll have the usual Spring Boot layout:
 shelflife-backend/
   src/
     main/
-      java/com/example/shelflife/...
+      java/
+        org/
+          saper/
+            shelflife/...
       resources/
         application.properties
         schema.sql        (optional)
@@ -88,7 +93,7 @@ A single book / movie / game in the user’s library.
 
 ### `sessions`
 
-Individual reading / watching sessions.
+Individual reading / watching / playing sessions.
 
 * `session_id` (PK)
 * `user_id` (FK → `users.user_id`)
@@ -125,16 +130,26 @@ You can configure the database via **`application.properties`** or environment v
 ### Option 1 – `application.properties`
 
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/shelflife?useSSL=false&serverTimezone=UTC
+spring.application.name=shelflife-backend
+
+# --- DataSource (MySQL) ---
+spring.datasource.url=jdbc:mysql://localhost:3306/shelflife?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
 spring.datasource.username=shelflife_user
-spring.datasource.password=your_password_here
+spring.datasource.password=shelflife_password
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
+# --- JPA / Hibernate ---
 spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=false
+spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
 
-# JSON / Web
-spring.mvc.problemdetails.enabled=true
+# Optional: extra logging during development
+logging.level.org.hibernate.SQL=DEBUG
+logging.level.org.hibernate.orm.jdbc.bind=TRACE
+
+# Optional: nicer error payloads
+# spring.mvc.problemdetails.enabled=true
 ```
 
 ### Option 2 – Environment variables
@@ -146,7 +161,7 @@ For deployment or local `.env` style setups, you can use:
 * `SPRING_DATASOURCE_PASSWORD`
 * `SPRING_JPA_HIBERNATE_DDL_AUTO` (`validate`, `update`, etc.)
 
-The React frontend reads `VITE_API_BASE`, so for local dev your backend base URL is typically:
+On the frontend side, React reads `VITE_API_BASE`, so for local dev your backend base URL is typically:
 
 ```bash
 VITE_API_BASE=http://localhost:8080
@@ -177,177 +192,451 @@ From `backend/shelflife-backend`:
 4. The app should be available at:
 
     * API base: `http://localhost:8080`
-    * Health check example (if you add one): `GET /actuator/health` (optional)
+    * (Optional) Health check if you add Actuator: `GET /actuator/health`
 
 ---
 
-## API Overview (MVP)
+## How the Frontend Talks to This API
 
-Base URL:
+The frontend lives in `frontend/shelflife-frontend` (Vite + React). It uses:
 
-```text
-http://localhost:8080/api
+* A central `API_BASE` (from `VITE_API_BASE`)
+* A small helper module (`src/api/works.js`) that wraps `fetch`
+* A custom hook `useAllWorks()` to hydrate the Library page
+* A Work Detail page that loads a single work + sessions + review
+
+Conceptual flow:
+
+```mermaid
+flowchart LR
+  React[React UI\n(LibraryPage, WorkDetailPage)] --> Hooks[Custom hooks\nuseAllWorks, etc.]
+  Hooks -->|GET /api/works| WorksCtrl[WorkController]
+  Hooks -->|GET /api/works/{id}| WorksCtrl
+  Hooks -->|GET /api/sessions?workId={id}| SessionsCtrl[SessionController]
+  Hooks -->|GET /api/reviews/work/{id}| ReviewsCtrl[ReviewController]
+
+  WorksCtrl -->|JSON| React
+  SessionsCtrl -->|JSON| React
+  ReviewsCtrl -->|JSON| React
 ```
 
-> Note: Exact request/response payloads may evolve as you build out DTOs. This is the intended high-level contract.
+### Typical frontend calls
 
-### Works
+* **Library page**
 
-#### `GET /api/works`
+    * `GET /api/works` → shows all works for the current user
+* **Work detail page**
 
-Return the current user’s library.
+    * `GET /api/works/{id}` → work metadata
+    * `GET /api/sessions?workId={id}` → sessions timeline
+    * `GET /api/reviews/work/{id}` → current user’s review for that work (if any)
 
-Query params you might support:
+There’s also a `VITE_USE_FAKE_WORKS` flag on the frontend so the UI can gracefully fall back to sample data if the backend is down during development.
 
-* `status` – `TO_EXPLORE | IN_PROGRESS | FINISHED`
-* `type` – `BOOK | MOVIE | GAME | OTHER`
-* `genre` – string
-* `search` – search by title/creator
-* `page`, `size` – pagination (optional)
+---
 
-**Response (example)**
+## API Map
+
+### Base URL
+
+* Local dev backend (default): `http://localhost:8080`
+* All routes are currently **scoped to the “current user”**, which in code is hard-coded as user `1L` until authentication is added.
+
+> In the controllers, `getCurrentUserId()` always returns `1L`. Later, you’ll swap this for a real authenticated user.
+
+---
+
+## 1. Works API
+
+**Base path:** `/api/works`
+**Controller:** `WorkController`
+**DTOs:** `WorkSummaryDto`, `WorkDetailDto`, `WorkCreateUpdateDto`
+
+### 1.1 List works for current user
+
+**GET** `/api/works`
+
+Returns all works belonging to the current user, sorted:
+
+1. By `status` enum order (`TO_EXPLORE → IN_PROGRESS → FINISHED`)
+2. Then by `title` (case-insensitive)
+
+**Response (200 OK – array of `WorkSummaryDto`):**
 
 ```json
 [
   {
-    "workId": 1,
+    "id": 1,
     "title": "Project Hail Mary",
     "creator": "Andy Weir",
     "type": "BOOK",
     "genre": "Science Fiction",
-    "status": "FINISHED",
-    "totalUnits": 496,
-    "coverUrl": null
+    "status": "FINISHED"
+  },
+  {
+    "id": 2,
+    "title": "Atomic Habits",
+    "creator": "James Clear",
+    "type": "BOOK",
+    "genre": "Self-Help",
+    "status": "IN_PROGRESS"
   }
 ]
 ```
 
-#### `GET /api/works/{id}`
+---
 
-Get details for a single work belonging to the current user.
+### 1.2 Get a single work
 
-#### `POST /api/works`
+**GET** `/api/works/{id}`
 
-Create a new work.
+Looks up a work by ID **and verifies it belongs to the current user**.
+
+**Response (200 OK – `WorkDetailDto`):**
 
 ```json
 {
-  "title": "Atomic Habits",
-  "creator": "James Clear",
+  "id": 1,
+  "title": "Project Hail Mary",
   "type": "BOOK",
-  "genre": "Self-Help",
-  "status": "IN_PROGRESS",
-  "totalUnits": 320,
-  "coverUrl": null
+  "creator": "Andy Weir",
+  "genre": "Science Fiction",
+  "status": "FINISHED",
+  "totalUnits": 480,
+  "coverUrl": "https://example.com/hail-mary.jpg",
+  "startedAt": "2024-10-01",
+  "finishedAt": "2024-10-21"
 }
 ```
 
-#### `PUT /api/works/{id}`
+**Error cases:**
 
-Update existing work (title, status, etc.).
-
-#### `DELETE /api/works/{id}`
-
-Delete a work. You’ll decide whether to cascade delete sessions/reviews via JPA or block deletion if related data exists. (DB FKs are currently set to cascade.)
+* Work not found or doesn’t belong to user → `404 Not Found` (via `ResponseStatusException` with `"Work not found"`).
 
 ---
 
-### Sessions
+### 1.3 Create a work
 
-#### `GET /api/works/{id}/sessions`
+**POST** `/api/works`
 
-Return all sessions for a specific work for the current user.
+Body is `WorkCreateUpdateDto`.
 
-**Response (example)**
+**Request body:**
+
+```json
+{
+  "title": "The Night We Lost Him",
+  "type": "BOOK",
+  "creator": "Laura Dave",
+  "genre": "Suspense",
+  "status": "TO_EXPLORE",
+  "totalUnits": 350,
+  "coverUrl": "https://example.com/night-we-lost-him.jpg",
+  "startedAt": null,
+  "finishedAt": null
+}
+```
+
+**Response (200 OK – `WorkDetailDto`):** created work (with generated `id`).
+
+---
+
+### 1.4 Update a work
+
+**PUT** `/api/works/{id}`
+
+**Request body (same shape as create):**
+
+```json
+{
+  "title": "The Night We Lost Him",
+  "type": "BOOK",
+  "creator": "Laura Dave",
+  "genre": "Suspense",
+  "status": "IN_PROGRESS",
+  "totalUnits": 350,
+  "coverUrl": "https://example.com/night-we-lost-him.jpg",
+  "startedAt": "2024-11-01",
+  "finishedAt": null
+}
+```
+
+**Response (200 OK – `WorkDetailDto`)**: updated work.
+
+---
+
+### 1.5 Delete a work
+
+**DELETE** `/api/works/{id}`
+
+* Verifies the work belongs to the current user, then deletes it.
+
+**Response:**
+
+* `204 No Content` on success
+* `404 Not Found` if not found / not owned by user
+
+---
+
+## 2. Sessions API
+
+**Base path:** `/api/sessions`
+**Controller:** `SessionController`
+**DTOs:** `SessionDto`, `SessionCreateUpdateDto`
+**Entity:** `Session`
+
+A “session” is a chunk of time spent reading/watching/playing a specific work.
+
+### 2.1 List sessions (optionally per work)
+
+**GET** `/api/sessions`
+
+Optional query parameter:
+
+* `workId` – when provided, only sessions for that work.
+
+**Examples:**
+
+* All sessions for current user:
+  `GET /api/sessions`
+* Sessions for a specific work:
+  `GET /api/sessions?workId=42`
+
+**Response (200 OK – array of `SessionDto`):**
 
 ```json
 [
   {
-    "sessionId": 10,
-    "startedAt": "2025-01-12T19:30:00Z",
-    "endedAt": "2025-01-12T20:15:00Z",
+    "id": 10,
+    "workId": 42,
+    "startedAt": "2024-11-20T19:00:00Z",
+    "endedAt": "2024-11-20T19:45:00Z",
     "minutes": 45,
-    "unitsCompleted": 35,
-    "note": "Read through the first big mission reveal."
+    "unitsCompleted": 30,
+    "note": "Read before bed"
   }
 ]
 ```
 
-#### `POST /api/works/{id}/sessions`
+---
 
-Create a new session for this work.
+### 2.2 Get a single session
 
-```json
-{
-  "startedAt": "2025-02-03T07:10:00Z",
-  "endedAt": "2025-02-03T07:40:00Z",
-  "minutes": 30,
-  "unitsCompleted": 20,
-  "note": "Morning reading session – notes on habit stacking."
-}
-```
+**GET** `/api/sessions/{id}`
 
-#### `PUT /api/sessions/{sessionId}`
+* Only returns the session if it belongs to the current user.
 
-Update an existing session (fix duration, note, etc.).
-
-#### `DELETE /api/sessions/{sessionId}`
-
-Delete a session.
+**Response:** `200 OK` with `SessionDto` or `404 Not Found`.
 
 ---
 
-### Reviews
+### 2.3 Create a session
 
-Each user can have **at most one review per work**.
+**POST** `/api/sessions`
 
-#### `GET /api/works/{id}/review`
+Body is `SessionCreateUpdateDto`.
 
-Get the **current user’s** review for a work (if it exists).
+**Request body:**
 
 ```json
 {
-  "reviewId": 5,
+  "workId": 42,
+  "startedAt": "2024-11-20T19:00:00Z",
+  "endedAt": "2024-11-20T19:45:00Z",
+  "minutes": 45,
+  "unitsCompleted": 30,
+  "note": "Read before bed"
+}
+```
+
+**Important:**
+
+* `workId` must refer to a work belonging to the current user.
+* `startedAt` is non-null in the entity; the DTO should provide it.
+
+**Response (200 OK – `SessionDto`):** created session.
+
+---
+
+### 2.4 Update a session
+
+**PUT** `/api/sessions/{id}`
+
+* Can optionally change `workId` (still enforced to be the current user’s work).
+* Otherwise same shape as create.
+
+**Response (200 OK – `SessionDto`)** or `404 Not Found`.
+
+---
+
+### 2.5 Delete a session
+
+**DELETE** `/api/sessions/{id}`
+
+**Response:**
+
+* `204 No Content` on success
+* `404 Not Found` if the session doesn’t belong to the user
+
+---
+
+## 3. Reviews API
+
+**Base path:** `/api/reviews`
+**Controller:** `ReviewController`
+**DTOs:** `ReviewDto`, `ReviewCreateUpdateDto`
+**Entity:** `Review`
+
+Each work can have at most **one review per user** (enforced by a unique constraint on `(user_id, work_id)`).
+
+### 3.1 List current user’s reviews
+
+**GET** `/api/reviews`
+
+**Response (200 OK – array of `ReviewDto`):**
+
+```json
+[
+  {
+    "id": 5,
+    "workId": 42,
+    "rating": 5,
+    "title": "Loved it",
+    "body": "Perfect cozy fall read.",
+    "privateReview": false,
+    "createdAt": "2024-11-15T18:00:00Z",
+    "updatedAt": "2024-11-16T12:30:00Z"
+  }
+]
+```
+
+---
+
+### 3.2 Get a review by ID
+
+**GET** `/api/reviews/{id}`
+
+* Only returns the review if it belongs to the current user.
+
+**Response:** `200 OK` with `ReviewDto` or `404 Not Found`.
+
+---
+
+### 3.3 Get the current user’s review for a work
+
+**GET** `/api/reviews/work/{workId}`
+
+* Looks up the single review for the given work & user.
+
+**Response:** `200 OK` with `ReviewDto` or `404 Not Found` if no review exists.
+This is the endpoint the Work Detail page uses when showing the “Review” panel.
+
+---
+
+### 3.4 Upsert a review (create or update)
+
+**POST** `/api/reviews`
+
+Body is `ReviewCreateUpdateDto`. This method:
+
+* Ensures `rating` is between 1 and 5.
+* Ensures the `workId` belongs to the current user.
+* If a review already exists for `(userId, workId)`, it updates it.
+* Otherwise, it creates a new review.
+
+**Request body:**
+
+```json
+{
+  "workId": 42,
   "rating": 5,
-  "title": "Absolutely loved it",
-  "body": "Great mix of science, humor, and heart.",
-  "isPrivate": false,
-  "createdAt": "2025-01-21T10:00:00Z"
+  "title": "Loved it",
+  "body": "Perfect cozy fall read.",
+  "privateReview": false
 }
 ```
 
-If the user hasn’t reviewed the work yet, you may return `404` or `null` via `200` depending on how you implement the controller. The frontend currently expects either a populated object or `null`/empty.
-
-#### `POST /api/works/{id}/review`
-
-Create **or update** the current user’s review for this work.
-
-```json
-{
-  "rating": 4,
-  "title": "Practical and motivating so far",
-  "body": "Already pulled a few ideas into my daily routine.",
-  "isPrivate": false
-}
-```
-
-Because of the unique constraint `(user_id, work_id)`, you can implement this as “upsert” style in the service.
-
-#### `PUT /api/reviews/{reviewId}`
-
-Update a review (rating, title, body, privacy flag).
-
-#### `DELETE /api/reviews/{reviewId}`
-
-Delete a review.
-
-#### (Optional) `GET /api/reviews`
-
-Return a “My Reviews” list for the current user, to power `/reviews` on the frontend.
+**Response (200 OK – `ReviewDto`):** the upserted review.
 
 ---
 
-### Authentication (Planned)
+### 3.5 Delete a review
+
+**DELETE** `/api/reviews/{id}`
+
+**Response:**
+
+* `204 No Content` on success
+* `404 Not Found` if the review doesn’t belong to the current user
+
+---
+
+## 4. Common Types (JSON Shapes)
+
+For quick reference:
+
+### `WorkSummaryDto`
+
+```json
+{
+  "id": 1,
+  "title": "string",
+  "creator": "string or null",
+  "type": "BOOK | MOVIE | GAME | OTHER",
+  "genre": "string or null",
+  "status": "TO_EXPLORE | IN_PROGRESS | FINISHED"
+}
+```
+
+### `WorkDetailDto`
+
+```json
+{
+  "id": 1,
+  "title": "string",
+  "type": "BOOK | MOVIE | GAME | OTHER",
+  "creator": "string or null",
+  "genre": "string or null",
+  "status": "TO_EXPLORE | IN_PROGRESS | FINISHED",
+  "totalUnits": 350,
+  "coverUrl": "string or null",
+  "startedAt": "YYYY-MM-DD or null",
+  "finishedAt": "YYYY-MM-DD or null"
+}
+```
+
+### `SessionDto`
+
+```json
+{
+  "id": 10,
+  "workId": 42,
+  "startedAt": "ISO-8601 instant",
+  "endedAt": "ISO-8601 instant or null",
+  "minutes": 45,
+  "unitsCompleted": 30,
+  "note": "string or null"
+}
+```
+
+### `ReviewDto`
+
+```json
+{
+  "id": 5,
+  "workId": 42,
+  "rating": 1,
+  "title": "string or null",
+  "body": "string or null",
+  "privateReview": false,
+  "createdAt": "ISO-8601 instant",
+  "updatedAt": "ISO-8601 instant or null"
+}
+```
+
+---
+
+## Authentication (Planned)
 
 Planned endpoints:
 
@@ -355,25 +644,30 @@ Planned endpoints:
 * `POST /api/auth/login` – return JWT / set session cookie
 * `GET /api/auth/me` – return current user profile
 
-For early development, you might:
+For early development, the backend:
 
-* Hardcode a user (e.g. `user_id = 1`) in the service layer, **or**
-* Use Spring Security with a simple in-memory user until you’re ready for full auth.
+* Hardcodes a user (e.g. `user_id = 1`) in controllers via `getCurrentUserId()`.
 
-Update this section as soon as you lock in the actual auth implementation.
+Update this section as soon as you lock in the actual auth implementation and wire it into the frontend `getAuthHeaders()` helper.
 
 ---
 
 ## Error Handling
 
-You can use standard Spring Boot exception handling:
+Standard Spring Boot exception handling:
 
 * `404 Not Found` – work/session/review not found for current user
 * `400 Bad Request` – validation errors (e.g., rating out of range)
 * `401/403` – once auth is added
-* `409 Conflict` – username/email already exists (for register)
+* `409 Conflict` – username/email already exists (when you add auth/register)
 
-For nicer responses, enable Problem Details (`spring.mvc.problemdetails.enabled=true`) and/or use a `@ControllerAdvice` with custom error payloads.
+For nicer responses, you can enable Problem Details:
+
+```properties
+spring.mvc.problemdetails.enabled=true
+```
+
+…and/or use a `@ControllerAdvice` to shape error payloads.
 
 ---
 
@@ -382,7 +676,7 @@ For nicer responses, enable Problem Details (`spring.mvc.problemdetails.enabled=
 Short roadmap for the backend:
 
 * [ ] Implement authentication (register/login/me) and plug into `getAuthHeaders()` in the frontend.
-* [ ] Add DTOs vs exposing JPA entities directly.
+* [ ] Add any extra DTOs you need on top of the current records.
 * [ ] Add pagination to `GET /api/works` and (optionally) `GET /api/reviews`.
 * [ ] Add derived stats endpoints:
 
@@ -390,7 +684,7 @@ Short roadmap for the backend:
     * `GET /api/stats/top-genres`
 * [ ] Add challenges/goals tables + endpoints (stretch).
 * [ ] Write unit/integration tests for services and controllers.
-* [ ] Add a simple `/actuator/health` endpoint if you plan to deploy to cloud.
+* [ ] Add `/actuator/health` and any other Actuator endpoints you want for deployment.
 
 ---
 
@@ -400,7 +694,7 @@ Short roadmap for the backend:
 
 2. Configure DB in `application.properties`.
 
-3. Run:
+3. Run backend:
 
    ```bash
    ./mvnw spring-boot:run
@@ -412,6 +706,6 @@ Short roadmap for the backend:
    VITE_API_BASE=http://localhost:8080 npm run dev
    ```
 
-5. Open `http://localhost:5173` and you should see the React Library view calling your backend as you implement each endpoint.
+5. Open `http://localhost:5173` to see the React Library view calling your backend (or using sample data) as you build out the endpoints.
 
 ---
