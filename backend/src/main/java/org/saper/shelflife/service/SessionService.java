@@ -8,9 +8,12 @@ import org.saper.shelflife.model.Work;
 import org.saper.shelflife.repository.SessionRepository;
 import org.saper.shelflife.repository.UserRepository;
 import org.saper.shelflife.repository.WorkRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -29,30 +32,46 @@ public class SessionService {
         this.workRepository = workRepository;
     }
 
+    // ---------- Queries ----------
+
+    @Transactional(readOnly = true)
     public List<SessionDto> getSessionsForUser(Long userId) {
         return sessionRepository.findByUserId(userId).stream()
+                .sorted(byStartedAtDesc())
                 .map(this::toDto)
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<SessionDto> getSessionsForWork(Long userId, Long workId) {
         // Ensure the work belongs to the user
         Work work = findUserWork(userId, workId);
         return sessionRepository.findByUserIdAndWorkId(userId, work.getId()).stream()
+                .sorted(byStartedAtDesc())
                 .map(this::toDto)
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public SessionDto getSession(Long userId, Long sessionId) {
         Session session = sessionRepository.findById(sessionId)
                 .filter(s -> s.getUser().getId().equals(userId))
-                .orElseThrow(() -> new IllegalArgumentException("Session not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Session not found"
+                ));
         return toDto(session);
     }
 
+    // ---------- Commands ----------
+
     public SessionDto createSession(Long userId, SessionCreateUpdateDto dto) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
+
         Work work = findUserWork(userId, dto.workId());
 
         Session session = new Session();
@@ -64,10 +83,41 @@ public class SessionService {
         return toDto(saved);
     }
 
+    public SessionDto createSessionForWork(Long userId, Long workId, SessionCreateUpdateDto dto) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
+
+        Work work = findUserWork(userId, workId);
+
+        Session session = new Session();
+        session.setUser(user);
+        session.setWork(work);
+
+        SessionCreateUpdateDto merged = new SessionCreateUpdateDto(
+                workId,
+                dto.startedAt(),
+                dto.endedAt(),
+                dto.minutes(),
+                dto.unitsCompleted(),
+                dto.note()
+        );
+
+        applyDto(merged, session);
+
+        Session saved = sessionRepository.save(session);
+        return toDto(saved);
+    }
+
     public SessionDto updateSession(Long userId, Long sessionId, SessionCreateUpdateDto dto) {
         Session session = sessionRepository.findById(sessionId)
                 .filter(s -> s.getUser().getId().equals(userId))
-                .orElseThrow(() -> new IllegalArgumentException("Session not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Session not found"
+                ));
 
         // Optional: allow changing workId, but still enforce ownership
         if (dto.workId() != null && !dto.workId().equals(session.getWork().getId())) {
@@ -83,16 +133,22 @@ public class SessionService {
     public void deleteSession(Long userId, Long sessionId) {
         Session session = sessionRepository.findById(sessionId)
                 .filter(s -> s.getUser().getId().equals(userId))
-                .orElseThrow(() -> new IllegalArgumentException("Session not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Session not found"
+                ));
         sessionRepository.delete(session);
     }
 
-    // ----- helpers -----
+    // ---------- Helpers ----------
 
     private Work findUserWork(Long userId, Long workId) {
         return workRepository.findById(workId)
                 .filter(w -> w.getUser().getId().equals(userId))
-                .orElseThrow(() -> new IllegalArgumentException("Work not found for user"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Work not found for user"
+                ));
     }
 
     private SessionDto toDto(Session s) {
@@ -113,5 +169,12 @@ public class SessionService {
         s.setMinutes(dto.minutes());
         s.setUnitsCompleted(dto.unitsCompleted());
         s.setNote(dto.note());
+    }
+
+    private Comparator<Session> byStartedAtDesc() {
+        return Comparator.comparing(
+                Session::getStartedAt,
+                Comparator.nullsLast(Comparator.naturalOrder())
+        ).reversed();
     }
 }

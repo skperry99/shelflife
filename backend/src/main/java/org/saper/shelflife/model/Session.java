@@ -33,7 +33,7 @@ public class Session {
     private Work work;
 
     @Column(name = "started_at", nullable = false)
-    private Instant startedAt;
+    private Instant startedAt = Instant.now();
 
     @Column(name = "ended_at")
     private Instant endedAt;
@@ -52,6 +52,18 @@ public class Session {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @PrePersist
+    public void onCreate() {
+        Instant now = Instant.now();
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        updatedAt = now;
+        if (startedAt == null) {
+            startedAt = now;
+        }
+    }
 
     @PreUpdate
     public void onUpdate() {

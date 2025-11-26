@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/sessions")
+@RequestMapping("/api")
 @CrossOrigin(origins = "http://localhost:5173") // adjust for your frontend
 public class SessionController {
 
@@ -24,8 +24,10 @@ public class SessionController {
         return 1L;
     }
 
+    // ---------- Collection endpoints ----------
+
     // GET /api/sessions or /api/sessions?workId=1
-    @GetMapping
+    @GetMapping("/sessions")
     public ResponseEntity<List<SessionDto>> getSessions(
             @RequestParam(name = "workId", required = false) Long workId
     ) {
@@ -37,21 +39,24 @@ public class SessionController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/{id}")
+    // GET /api/sessions/{id}
+    @GetMapping("/sessions/{id}")
     public ResponseEntity<SessionDto> getSession(@PathVariable Long id) {
         Long userId = getCurrentUserId();
         SessionDto dto = sessionService.getSession(userId, id);
         return ResponseEntity.ok(dto);
     }
 
-    @PostMapping
+    // POST /api/sessions
+    @PostMapping("/sessions")
     public ResponseEntity<SessionDto> createSession(@RequestBody SessionCreateUpdateDto dto) {
         Long userId = getCurrentUserId();
         SessionDto created = sessionService.createSession(userId, dto);
         return ResponseEntity.ok(created);
     }
 
-    @PutMapping("/{id}")
+    // PUT /api/sessions/{id}
+    @PutMapping("/sessions/{id}")
     public ResponseEntity<SessionDto> updateSession(
             @PathVariable Long id,
             @RequestBody SessionCreateUpdateDto dto
@@ -61,10 +66,50 @@ public class SessionController {
         return ResponseEntity.ok(updated);
     }
 
-    @DeleteMapping("/{id}")
+    // DELETE /api/sessions/{id}
+    @DeleteMapping("/sessions/{id}")
     public ResponseEntity<Void> deleteSession(@PathVariable Long id) {
         Long userId = getCurrentUserId();
         sessionService.deleteSession(userId, id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ---------- Work-scoped endpoints (match frontend) ----------
+
+    /**
+     * GET /api/works/{workId}/sessions
+     * <p>
+     * This is what your WorkDetailPage calls via getWorkSessions(workId).
+     */
+    @GetMapping("/works/{workId}/sessions")
+    public ResponseEntity<List<SessionDto>> getSessionsForWork(@PathVariable Long workId) {
+        Long userId = getCurrentUserId();
+        List<SessionDto> sessions = sessionService.getSessionsForWork(userId, workId);
+        return ResponseEntity.ok(sessions);
+    }
+
+    /**
+     * POST /api/works/{workId}/sessions
+     * <p>
+     * Optional: nice future endpoint for "Log session" directly from a work detail page.
+     */
+    @PostMapping("/works/{workId}/sessions")
+    public ResponseEntity<SessionDto> createSessionForWork(
+            @PathVariable Long workId,
+            @RequestBody SessionCreateUpdateDto body
+    ) {
+        Long userId = getCurrentUserId();
+
+        SessionCreateUpdateDto dto = new SessionCreateUpdateDto(
+                workId,
+                body.startedAt(),
+                body.endedAt(),
+                body.minutes(),
+                body.unitsCompleted(),
+                body.note()
+        );
+
+        SessionDto created = sessionService.createSessionForWork(userId, workId, dto);
+        return ResponseEntity.ok(created);
     }
 }
