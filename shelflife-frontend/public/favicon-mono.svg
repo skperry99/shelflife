@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">ShelfLife icon (monochrome)</title>
+  <desc id="desc">Simple book spine icon for dark tabs.</desc>
+
+  <!-- Transparent background -->
+  <rect width="64" height="64" fill="none"></rect>
+
+  <!-- Book spine tile -->
+  <g fill="#ffffff">
+    <!-- Rounded tile -->
+    <rect x="8" y="8" width="48" height="48" rx="12"></rect>
+
+    <!-- Cut out inner area so the spine is the main shape -->
+    <mask id="spine-mask">
+      <rect x="0" y="0" width="64" height="64" fill="white"></rect>
+      <!-- Knock out a central column to leave spine + bookmark -->
+      <rect x="18" y="14" width="28" height="36" rx="8" fill="black"></rect>
+    </mask>
+
+    <rect x="8" y="8" width="48" height="48" rx="12" mask="url(#spine-mask)"></rect>
+
+    <!-- Simple bookmark notch -->
+    <path d="M36 16 L44 16 L44 26 L40 23 L36 26 Z"></path>
+  </g>
+</svg>
