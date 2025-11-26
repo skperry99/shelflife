@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 
-import AppLayout from "../components/layout/AppLayout.jsx";
-import { getWorkById, getWorkSessions, getWorkReview } from "../api/works.js";
+import AppLayout from "../layout/AppLayout.jsx";
+import { getWorkById, getWorkSessions, getWorkReview } from "../../api/works.js";
 
 export default function WorkDetailPage() {
   const { workId } = useParams();

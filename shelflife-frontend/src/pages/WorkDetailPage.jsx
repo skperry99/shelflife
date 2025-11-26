@@ -73,8 +73,8 @@ export default function WorkDetailPage() {
 
         {/* Error state with Back to Library */}
         {error && (
-          <div className="panel panel--soft u-stack-sm">
-            <p className="small-text" style={{ color: "#8b3a3a" }}>
+          <div className="panel panel--soft panel--error u-stack-sm">
+            <p className="small-text" >
               {error}
             </p>
             <p className="small-text">
