@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 280" role="img" aria-labelledby="title desc">
+  <title id="title">Empty shelf state</title>
+  <desc id="desc">
+    A simple empty bookshelf with one small book and a bookmark, representing an empty library.
+  </desc>
+
+  <!-- Background -->
+  <rect width="600" height="280" fill="none"></rect>
+
+  <!-- Soft background panel -->
+  <rect x="40" y="40" width="520" height="200" rx="24" fill="#f5f0e8"></rect>
+  <rect x="40" y="40" width="520" height="200" rx="24" fill="url(#bg-grad)"></rect>
+
+  <defs>
+    <radialGradient id="bg-grad" cx="25%" cy="10%" r="90%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"></stop>
+      <stop offset="60%" stop-color="#f5f0e8" stop-opacity="1"></stop>
+      <stop offset="100%" stop-color="#ece1d3" stop-opacity="1"></stop>
+    </radialGradient>
+  </defs>
+
+  <!-- Shelf board -->
+  <g transform="translate(80, 160)">
+    <rect x="0" y="0" width="440" height="56" rx="18" fill="#e4d7c5"></rect>
+    <rect x="0" y="40" width="440" height="18" rx="8" fill="#c9b79c"></rect>
+
+    <!-- Single little book on the left -->
+    <g transform="translate(70, -60)">
+      <rect x="0" y="0" width="50" height="90" rx="10" fill="#c89b3c"></rect>
+      <rect x="32" y="0" width="10" height="90" rx="10" fill="#9e6f22"></rect>
+      <rect x="10" y="24" width="26" height="4" rx="2" fill="#f8e7c2"></rect>
+      <!-- Tiny bookmark -->
+      <path d="M18 0 L30 0 L30 14 L24 11 L18 14 Z" fill="#23423d"></path>
+    </g>
+
+    <!-- Light “ghost” outlines for future books -->
+    <g opacity="0.25" fill="none" stroke="#bcae9c" stroke-width="2">
+      <rect x="150" y="-55" width="40" height="80" rx="8"></rect>
+      <rect x="210" y="-60" width="50" height="90" rx="8"></rect>
+      <rect x="280" y="-52" width="40" height="82" rx="8"></rect>
+    </g>
+  </g>
+
+  <!-- Text beside the shelf -->
+  <text x="320" y="120" text-anchor="middle" font-family="Merriweather, Georgia, 'Times New Roman', serif" font-size="22" fill="#23423d">
+    Your shelf is waiting
+  </text>
+  <text x="320" y="148" text-anchor="middle" font-family="Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" fill="#6b6258">
+    Add your first book, movie, or game
+  </text>
+</svg>
