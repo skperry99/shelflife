@@ -9,7 +9,7 @@ import java.util.List;
 
 @Setter
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@NoArgsConstructor
 @ToString(exclude = {"passwordHash", "works", "sessions", "reviews"})
 @Entity
 @Table(
