@@ -4,7 +4,8 @@ import org.saper.shelflife.model.Work;
 import org.saper.shelflife.model.WorkStatus;
 import org.saper.shelflife.model.WorkType;
 import org.springframework.data.jpa.repository.JpaRepository;
-
+// import org.springframework.data.domain.Page;
+// import org.springframework.data.domain.Pageable;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,4 +31,9 @@ public interface WorkRepository extends JpaRepository<Work, Long> {
      * Useful for enforcing per-user access at the repository level.
      */
     Optional<Work> findByIdAndUserId(Long id, Long userId);
+
+    // For future pagination support
+    // Page<Work> findByUserId(Long userId, Pageable pageable);
+    // Page<Work> findByUserIdAndStatus(Long userId, WorkStatus status, Pageable pageable);
+    // Page<Work> findByUserIdAndType(Long userId, WorkType type, Pageable pageable);
 }
