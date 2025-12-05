@@ -1,13 +1,15 @@
 package org.saper.shelflife.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.Instant;
 
 @Setter
 @Getter
+@NoArgsConstructor
+@ToString(exclude = {"user", "work"})
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(
         name = "reviews",
@@ -24,19 +26,26 @@ import java.time.Instant;
 )
 public class Review {
 
+    @EqualsAndHashCode.Include
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "review_id", nullable = false, updatable = false)
     private Long id; // review_id
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_reviews_user"))
+    @JoinColumn(
+            name = "user_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_reviews_user")
+    )
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "work_id", nullable = false,
-            foreignKey = @ForeignKey(name = "fk_reviews_work"))
+    @JoinColumn(
+            name = "work_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_reviews_work")
+    )
     private Work work;
 
     @Column(nullable = false)
@@ -52,18 +61,33 @@ public class Review {
     private boolean privateReview = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
+    private Instant createdAt;
 
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    // --- static factory (optional helper) ---
+
+    public static Review create(User user, Work work, Integer rating, String title, String body, boolean privateReview) {
+        Review r = new Review();
+        r.setUser(user);
+        r.setWork(work);
+        r.setRating(rating);
+        r.setTitle(title);
+        r.setBody(body);
+        r.setPrivateReview(privateReview);
+        return r;
+    }
+
+    // --- lifecycle hooks ---
+
     @PrePersist
     public void onCreate() {
         Instant now = Instant.now();
-        if (createdAt == null) {
-            createdAt = now;
+        if (this.createdAt == null) {
+            this.createdAt = now;
         }
-        updatedAt = now;
+        this.updatedAt = now;
     }
 
     @PreUpdate

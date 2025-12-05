@@ -11,6 +11,7 @@ import java.util.List;
 @Getter
 @NoArgsConstructor
 @ToString(exclude = {"passwordHash", "works", "sessions", "reviews"})
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(
         name = "users",
@@ -21,6 +22,7 @@ import java.util.List;
 )
 public class User {
 
+    @EqualsAndHashCode.Include
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id", nullable = false, updatable = false)
@@ -44,14 +46,66 @@ public class User {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Setter(AccessLevel.NONE)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Work> works = new ArrayList<>();
 
+    @Setter(AccessLevel.NONE)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Session> sessions = new ArrayList<>();
 
+    @Setter(AccessLevel.NONE)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews = new ArrayList<>();
+
+    // --- static factory ---
+
+    public static User create(String username, String email, String encodedPassword, String displayName) {
+        User u = new User();
+        u.setUsername(username);
+        u.setEmail(email);
+        u.setPasswordHash(encodedPassword);
+        u.setDisplayName(displayName);
+        return u;
+    }
+
+    // --- relationship helpers ---
+
+    public void addWork(Work work) {
+        if (work == null) return;
+        works.add(work);
+        work.setUser(this);
+    }
+
+    public void removeWork(Work work) {
+        if (work == null) return;
+        works.remove(work);
+        work.setUser(null);
+    }
+
+    public void addSession(Session session) {
+        if (session == null) return;
+        sessions.add(session);
+        session.setUser(this);
+    }
+
+    public void removeSession(Session session) {
+        if (session == null) return;
+        sessions.remove(session);
+        session.setUser(null);
+    }
+
+    public void addReview(Review review) {
+        if (review == null) return;
+        reviews.add(review);
+        review.setUser(this);
+    }
+
+    public void removeReview(Review review) {
+        if (review == null) return;
+        reviews.remove(review);
+        review.setUser(null);
+    }
 
     // --- lifecycle hooks ---
 
