@@ -1,7 +1,8 @@
 package org.saper.shelflife.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record LoginRequestDto(
-        String usernameOrEmail,
-        String password
-) {
-}
+        @NotBlank String usernameOrEmail,
+        @NotBlank String password
+) {}

@@ -1,9 +1,11 @@
 package org.saper.shelflife.dto;
 
+import jakarta.validation.constraints.*;
+
 public record UserRegistrationDto(
-        String username,
-        String email,
-        String password,
-        String displayName
-) {
-}
+        @NotBlank @Size(min=3, max=50) String username,
+        @NotBlank @Email String email,
+        @NotBlank @Size(min=8) String password,
+        @Size(max=100) String displayName
+) {}
+

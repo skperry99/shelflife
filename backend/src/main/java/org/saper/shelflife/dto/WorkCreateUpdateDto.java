@@ -1,10 +1,6 @@
 package org.saper.shelflife.dto;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import org.saper.shelflife.model.WorkStatus;
 import org.saper.shelflife.model.WorkType;
 
@@ -29,6 +25,7 @@ public record WorkCreateUpdateDto(
         String genre,
 
         // Allow null; service can default to TO_EXPLORE if you ever want.
+        @NotNull
         WorkStatus status,
 
         // Optional: treat as "pages", "minutes", etc.
@@ -39,7 +36,10 @@ public record WorkCreateUpdateDto(
         @Size(max = 500)
         String coverUrl,
 
+        @PastOrPresent
         LocalDate startedAt,
+
+        @PastOrPresent
         LocalDate finishedAt
 ) {
 }
