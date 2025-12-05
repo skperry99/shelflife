@@ -5,14 +5,14 @@ import org.saper.shelflife.dto.WorkCreateUpdateDto;
 import org.saper.shelflife.dto.WorkDetailDto;
 import org.saper.shelflife.dto.WorkSummaryDto;
 import org.saper.shelflife.service.WorkService;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/works")
-@CrossOrigin(origins = "http://localhost:5173") // adjust for other dev origins if needed
 public class WorkController {
 
     private final WorkService workService;
@@ -21,49 +21,80 @@ public class WorkController {
         this.workService = workService;
     }
 
-    // TODO: replace this with a SecurityContext lookup when auth is in place
-    private Long getCurrentUserId() {
-        return 1L;
-    }
-
     @GetMapping
-    public ResponseEntity<List<WorkSummaryDto>> getWorks() {
-        Long userId = getCurrentUserId();
-        List<WorkSummaryDto> works = workService.getWorksForUser(userId);
-        return ResponseEntity.ok(works);
+    public List<WorkSummaryDto> getWorks(
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        Long userId = extractUserIdFromDemoToken(authHeader);
+        return workService.getWorksForUser(userId);
     }
 
     @GetMapping("/{workId}")
-    public ResponseEntity<WorkDetailDto> getWork(@PathVariable Long workId) {
-        Long userId = getCurrentUserId();
-        WorkDetailDto work = workService.getWorkById(userId, workId);
-        return ResponseEntity.ok(work);
+    public WorkDetailDto getWork(
+            @PathVariable Long workId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        Long userId = extractUserIdFromDemoToken(authHeader);
+        return workService.getWorkById(userId, workId);
     }
 
     @PostMapping
-    public ResponseEntity<WorkDetailDto> createWork(
+    @ResponseStatus(HttpStatus.CREATED)
+    public WorkDetailDto createWork(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @Valid @RequestBody WorkCreateUpdateDto dto
     ) {
-        Long userId = getCurrentUserId();
-        WorkDetailDto created = workService.createWork(userId, dto);
-        // For now: 200 OK is fine; later you can switch to 201 Created + Location header.
-        return ResponseEntity.ok(created);
+        Long userId = extractUserIdFromDemoToken(authHeader);
+        return workService.createWork(userId, dto);
     }
 
     @PutMapping("/{workId}")
-    public ResponseEntity<WorkDetailDto> updateWork(
+    public WorkDetailDto updateWork(
             @PathVariable Long workId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @Valid @RequestBody WorkCreateUpdateDto dto
     ) {
-        Long userId = getCurrentUserId();
-        WorkDetailDto updated = workService.updateWork(userId, workId, dto);
-        return ResponseEntity.ok(updated);
+        Long userId = extractUserIdFromDemoToken(authHeader);
+        return workService.updateWork(userId, workId, dto);
     }
 
     @DeleteMapping("/{workId}")
-    public ResponseEntity<Void> deleteWork(@PathVariable Long workId) {
-        Long userId = getCurrentUserId();
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteWork(
+            @PathVariable Long workId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        Long userId = extractUserIdFromDemoToken(authHeader);
         workService.deleteWork(userId, workId);
-        return ResponseEntity.noContent().build();
+    }
+
+    // ---------- Demo-token helper (matches AuthController /me) ----------
+
+    private Long extractUserIdFromDemoToken(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Missing or invalid Authorization header"
+            );
+        }
+
+        String token = authHeader.substring("Bearer ".length());
+        String prefix = "demo-token-user-";
+
+        if (!token.startsWith(prefix)) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Invalid token"
+            );
+        }
+
+        try {
+            return Long.parseLong(token.substring(prefix.length()));
+        } catch (NumberFormatException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Invalid token"
+            );
+        }
     }
 }
