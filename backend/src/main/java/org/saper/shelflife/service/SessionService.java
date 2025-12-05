@@ -74,9 +74,8 @@ public class SessionService {
 
         Work work = findUserWork(userId, dto.workId());
 
-        Session session = new Session();
-        session.setUser(user);
-        session.setWork(work);
+        // Use factory for base wiring + default startedAt
+        Session session = Session.create(user, work, dto.startedAt());
         applyDto(dto, session);
 
         Session saved = sessionRepository.save(session);
@@ -92,10 +91,7 @@ public class SessionService {
 
         Work work = findUserWork(userId, workId);
 
-        Session session = new Session();
-        session.setUser(user);
-        session.setWork(work);
-
+        // Merge path-specific workId into a derived DTO
         SessionCreateUpdateDto merged = new SessionCreateUpdateDto(
                 workId,
                 dto.startedAt(),
@@ -105,6 +101,7 @@ public class SessionService {
                 dto.note()
         );
 
+        Session session = Session.create(user, work, merged.startedAt());
         applyDto(merged, session);
 
         Session saved = sessionRepository.save(session);
@@ -164,7 +161,10 @@ public class SessionService {
     }
 
     private void applyDto(SessionCreateUpdateDto dto, Session s) {
-        s.setStartedAt(dto.startedAt());
+        // Only override startedAt if DTO actually has a value
+        if (dto.startedAt() != null) {
+            s.setStartedAt(dto.startedAt());
+        }
         s.setEndedAt(dto.endedAt());
         s.setMinutes(dto.minutes());
         s.setUnitsCompleted(dto.unitsCompleted());

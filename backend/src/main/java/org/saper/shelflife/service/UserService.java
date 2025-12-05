@@ -8,10 +8,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @Transactional
+@Validated
 public class UserService {
 
     private final UserRepository userRepository;
@@ -58,19 +60,21 @@ public class UserService {
             );
         }
 
-        User user = new User();
-        user.setUsername(username);
-        user.setEmail(email);
-        user.setDisplayName(
+        String displayName =
                 dto.displayName() != null && !dto.displayName().isBlank()
                         ? dto.displayName().trim()
-                        : username
+                        : username;
+
+        User user = User.create(
+                username,
+                email,
+                passwordEncoder.encode(dto.password()),
+                displayName
         );
-        user.setPasswordHash(passwordEncoder.encode(dto.password()));
 
         User saved = userRepository.save(user);
         return toProfileDto(saved);
-    }
+    }   // <-- this was missing
 
     // ---------- Queries ----------
 

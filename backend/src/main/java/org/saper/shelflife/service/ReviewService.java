@@ -52,11 +52,6 @@ public class ReviewService {
         return toDto(review);
     }
 
-    /**
-     * Get the review for a given work, or {@code null} if none exists.
-     * This is ideal for your /api/works/{workId}/review endpoint, since the
-     * frontend can cleanly treat "no review yet" as null rather than an error.
-     */
     @Transactional(readOnly = true)
     public ReviewDto getReviewForWorkOrNull(Long userId, Long workId) {
         return reviewRepository.findByUserIdAndWorkId(userId, workId)
@@ -90,15 +85,27 @@ public class ReviewService {
                 ));
 
         Review review = reviewRepository.findByUserIdAndWorkId(userId, dto.workId())
-                .orElseGet(Review::new);
-
-        review.setUser(user);
-        review.setWork(work);
-        applyDto(dto, review);
+                .map(existing -> {
+                    // Update existing review in place
+                    applyDto(dto, existing);
+                    return existing;
+                })
+                .orElseGet(() ->
+                        // Create a brand-new review using the factory
+                        Review.create(
+                                user,
+                                work,
+                                dto.rating(),
+                                dto.title(),
+                                dto.body(),
+                                dto.isPrivate()
+                        )
+                );
 
         Review saved = reviewRepository.save(review);
         return toDto(saved);
     }
+
 
     public void deleteReview(Long userId, Long reviewId) {
         Review review = reviewRepository.findById(reviewId)
@@ -120,7 +127,7 @@ public class ReviewService {
                 r.getRating(),
                 r.getTitle(),
                 r.getBody(),
-                r.isPrivateReview(), // maps to isPrivate in ReviewDto
+                r.isPrivateReview(),
                 r.getCreatedAt(),
                 r.getUpdatedAt()
         );

@@ -33,7 +33,7 @@ public class WorkService {
     @Transactional(readOnly = true)
     public List<WorkSummaryDto> getWorksForUser(Long userId) {
         return workRepository.findByUserId(userId).stream()
-                // Sort by *explicit* status order, then by title (case-insensitive)
+                // Sort by explicit status order, then by title (case-insensitive)
                 .sorted(
                         Comparator
                                 .comparingInt((Work w) -> statusSortOrder(w.getStatus()))
@@ -61,8 +61,15 @@ public class WorkService {
                         "User not found"
                 ));
 
-        Work work = new Work();
-        work.setUser(user);
+        // Use factory for base wiring + type/status defaults
+        Work work = Work.createForUser(
+                user,
+                dto.title(),
+                dto.type(),
+                dto.status()
+        );
+
+        // Fill in the rest of the fields
         applyDtoToWork(dto, work);
 
         Work saved = workRepository.save(work);
@@ -94,7 +101,6 @@ public class WorkService {
 
     /**
      * Explicit sort order for statuses so we’re not tied to enum ordinal().
-     * Adjust here if you ever add more statuses or want a different sequence.
      */
     private int statusSortOrder(WorkStatus status) {
         if (status == null) return Integer.MAX_VALUE;
@@ -103,7 +109,6 @@ public class WorkService {
             case TO_EXPLORE -> 0;
             case IN_PROGRESS -> 1;
             case FINISHED -> 2;
-            // Any future statuses fall to the bottom until you place them explicitly
             default -> 99;
         };
     }
@@ -136,10 +141,17 @@ public class WorkService {
 
     private void applyDtoToWork(WorkCreateUpdateDto dto, Work work) {
         work.setTitle(dto.title());
-        work.setType(dto.type());
+
+        // Safely handle potentially-null enum fields
+        if (dto.type() != null) {
+            work.setType(dto.type());
+        }
+        if (dto.status() != null) {
+            work.setStatus(dto.status());
+        }
+
         work.setCreator(dto.creator());
         work.setGenre(dto.genre());
-        work.setStatus(dto.status());
         work.setTotalUnits(dto.totalUnits());
         work.setCoverUrl(dto.coverUrl());
         work.setStartedAt(dto.startedAt());

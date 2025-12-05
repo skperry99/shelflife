@@ -46,12 +46,12 @@ public class AuthService {
             // Treat as email
             String email = identifier.toLowerCase();
             user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> invalidCredentials());
+                    .orElseThrow(this::invalidCredentials);
         } else {
             // Treat as username
             String username = identifier.toLowerCase();
             user = userRepository.findByUsername(username)
-                    .orElseThrow(() -> invalidCredentials());
+                    .orElseThrow(this::invalidCredentials);
         }
 
         if (!passwordEncoder.matches(dto.password(), user.getPasswordHash())) {
