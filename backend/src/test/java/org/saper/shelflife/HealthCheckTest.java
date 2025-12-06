@@ -4,11 +4,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class ShelflifeBackendApplicationTests {
+class HealthCheckTest {
 
     @Test
-    void contextLoads() {
-        // Simple "sanity" test; no Spring context involved yet
+    void healthCheckPasses() {
+        // Simple "always true" test just to verify CI and JUnit wiring
         assertTrue(true);
     }
 }
