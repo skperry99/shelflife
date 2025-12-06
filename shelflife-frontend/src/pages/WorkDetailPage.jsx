@@ -74,9 +74,7 @@ export default function WorkDetailPage() {
         {/* Error state with Back to Library */}
         {error && (
           <div className="panel panel--soft panel--error u-stack-sm">
-            <p className="small-text" >
-              {error}
-            </p>
+            <p className="small-text">{error}</p>
             <p className="small-text">
               This work might have been removed or is temporarily unavailable.
             </p>
@@ -204,7 +202,7 @@ export default function WorkDetailPage() {
                 {sessions.length > 0 && (
                   <ul className="work-detail-session-list">
                     {sessions.map((s) => (
-                      <li key={s.sessionId || s.session_id}>
+                      <li key={s.id ?? s.sessionId ?? s.session_id}>
                         <div className="work-detail-session-line">
                           <span className="work-detail-session-main">
                             {s.startedAt || s.started_at}
