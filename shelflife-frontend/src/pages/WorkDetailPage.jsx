@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 
 import AppLayout from "../components/layout/AppLayout.jsx";
-import { getWorkById, getWorkSessions, getWorkReview } from "../api/works.js";
+import {
+  getWorkById,
+  getWorkSessions,
+  getWorkReview,
+  createSession,
+} from "../api/works.js";
 
 export default function WorkDetailPage() {
   const { workId } = useParams();
@@ -13,6 +18,15 @@ export default function WorkDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [isSessionFormOpen, setIsSessionFormOpen] = useState(false);
+  const [sessionForm, setSessionForm] = useState({
+    minutes: "",
+    unitsCompleted: "",
+    note: "",
+  });
+  const [sessionSaving, setSessionSaving] = useState(false);
+  const [sessionError, setSessionError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +70,52 @@ export default function WorkDetailPage() {
       cancelled = true;
     };
   }, [workId]);
+
+  function handleSessionFieldChange(event) {
+    const { name, value } = event.target;
+    setSessionForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
+
+  async function handleSessionSubmit(event) {
+    event.preventDefault();
+    if (!workId) return;
+
+    setSessionSaving(true);
+    setSessionError(null);
+
+    try {
+      const payload = {
+        minutes: sessionForm.minutes ? Number(sessionForm.minutes) : null,
+        unitsCompleted: sessionForm.unitsCompleted
+          ? Number(sessionForm.unitsCompleted)
+          : null,
+        note: sessionForm.note?.trim() || null,
+      };
+
+      // POST /api/works/{workId}/sessions
+      await createSession(workId, payload);
+
+      // Refresh sessions list
+      const fresh = await getWorkSessions(workId);
+      const items = Array.isArray(fresh) ? fresh : [];
+      setSessions(items);
+
+      setIsSessionFormOpen(false);
+      setSessionForm({
+        minutes: "",
+        unitsCompleted: "",
+        note: "",
+      });
+    } catch (err) {
+      console.error(err);
+      setSessionError(err.message || "Could not save session.");
+    } finally {
+      setSessionSaving(false);
+    }
+  }
 
   const pageTitle = work ? work.title : "Work detail";
 
@@ -225,7 +285,79 @@ export default function WorkDetailPage() {
                   </ul>
                 )}
 
-                {/* Later: "Log session" form here */}
+                <div className="u-stack-sm">
+                  <button
+                    type="button"
+                    className="button button--subtle"
+                    onClick={() => setIsSessionFormOpen((open) => !open)}
+                  >
+                    {isSessionFormOpen ? "Cancel" : "Log session"}
+                  </button>
+
+                  {isSessionFormOpen && (
+                    <form className="u-stack-sm" onSubmit={handleSessionSubmit}>
+                      <div className="field-group">
+                        <label
+                          className="field-label"
+                          htmlFor="session-minutes"
+                        >
+                          Minutes
+                        </label>
+                        <input
+                          id="session-minutes"
+                          name="minutes"
+                          type="number"
+                          min="1"
+                          className="input"
+                          value={sessionForm.minutes}
+                          onChange={handleSessionFieldChange}
+                          required
+                        />
+                      </div>
+
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="session-units">
+                          Units completed (optional)
+                        </label>
+                        <input
+                          id="session-units"
+                          name="unitsCompleted"
+                          type="number"
+                          min="0"
+                          className="input"
+                          value={sessionForm.unitsCompleted}
+                          onChange={handleSessionFieldChange}
+                        />
+                      </div>
+
+                      <div className="field-group">
+                        <label className="field-label" htmlFor="session-note">
+                          Note (optional)
+                        </label>
+                        <textarea
+                          id="session-note"
+                          name="note"
+                          className="textarea"
+                          rows="3"
+                          value={sessionForm.note}
+                          onChange={handleSessionFieldChange}
+                        />
+                      </div>
+
+                      {sessionError && (
+                        <p className="small-text">Error: {sessionError}</p>
+                      )}
+
+                      <button
+                        type="submit"
+                        className="button"
+                        disabled={sessionSaving}
+                      >
+                        {sessionSaving ? "Saving…" : "Save session"}
+                      </button>
+                    </form>
+                  )}
+                </div>
               </section>
 
               <section className="panel u-stack-sm">
