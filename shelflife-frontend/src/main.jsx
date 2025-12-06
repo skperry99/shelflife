@@ -14,7 +14,7 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <BrowserRouter basename="/shelflife">
+    <BrowserRouter >
       <App />
     </BrowserRouter>
   </React.StrictMode>

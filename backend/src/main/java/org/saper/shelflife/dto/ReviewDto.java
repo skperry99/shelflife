@@ -8,7 +8,8 @@ public record ReviewDto(
         Integer rating,
         String title,
         String body,
-        boolean privateReview,
+        boolean isPrivate,
         Instant createdAt,
         Instant updatedAt
-) {}
+) {
+}

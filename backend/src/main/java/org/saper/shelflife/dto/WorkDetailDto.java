@@ -5,6 +5,9 @@ import org.saper.shelflife.model.WorkType;
 
 import java.time.LocalDate;
 
+/**
+ * Detailed view of a single Work, used on the Work Detail page.
+ */
 public record WorkDetailDto(
         Long id,
         String title,
@@ -16,4 +19,5 @@ public record WorkDetailDto(
         String coverUrl,
         LocalDate startedAt,
         LocalDate finishedAt
-) {}
+) {
+}

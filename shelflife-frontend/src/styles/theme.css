@@ -253,6 +253,15 @@ p {
   background: var(--color-panel-soft);
 }
 
+/* Error variant for soft panels */
+.panel.panel--soft.panel--error {
+  border-color: var(--color-accent-rust);
+}
+
+.panel.panel--soft.panel--error .small-text {
+  color: var(--color-accent-rust);
+}
+
 .card {
   background: var(--color-panel);
   border-radius: var(--radius-md);

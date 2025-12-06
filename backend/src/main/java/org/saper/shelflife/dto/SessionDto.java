@@ -10,4 +10,5 @@ public record SessionDto(
         Integer minutes,
         Integer unitsCompleted,
         String note
-) {}
+) {
+}

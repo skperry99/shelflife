@@ -8,8 +8,10 @@ import org.saper.shelflife.model.Work;
 import org.saper.shelflife.repository.ReviewRepository;
 import org.saper.shelflife.repository.UserRepository;
 import org.saper.shelflife.repository.WorkRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -29,56 +31,94 @@ public class ReviewService {
         this.workRepository = workRepository;
     }
 
+    // ---------- Queries ----------
+
+    @Transactional(readOnly = true)
     public List<ReviewDto> getReviewsForUser(Long userId) {
         return reviewRepository.findByUserId(userId).stream()
                 .map(this::toDto)
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public ReviewDto getReviewById(Long userId, Long reviewId) {
         Review review = reviewRepository.findById(reviewId)
                 .filter(r -> r.getUser().getId().equals(userId))
-                .orElseThrow(() -> new IllegalArgumentException("Review not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Review not found"
+                ));
+
         return toDto(review);
     }
 
-    public ReviewDto getReviewForWork(Long userId, Long workId) {
-        Review review = reviewRepository.findByUserIdAndWorkId(userId, workId)
-                .orElseThrow(() -> new IllegalArgumentException("Review not found for work"));
-        return toDto(review);
+    @Transactional(readOnly = true)
+    public ReviewDto getReviewForWorkOrNull(Long userId, Long workId) {
+        return reviewRepository.findByUserIdAndWorkId(userId, workId)
+                .map(this::toDto)
+                .orElse(null);
     }
+
+    // ---------- Commands ----------
 
     public ReviewDto upsertReview(Long userId, ReviewCreateUpdateDto dto) {
-        if (dto.rating() == null || dto.rating() < 1 || dto.rating() > 5) {
-            throw new IllegalArgumentException("Rating must be between 1 and 5");
+        // Simple rating guard; you can also put Bean Validation on the DTO.
+        Integer rating = dto.rating();
+        if (rating == null || rating < 1 || rating > 5) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Rating must be between 1 and 5"
+            );
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found"
+                ));
 
         Work work = workRepository.findById(dto.workId())
                 .filter(w -> w.getUser().getId().equals(userId))
-                .orElseThrow(() -> new IllegalArgumentException("Work not found for user"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Work not found for user"
+                ));
 
         Review review = reviewRepository.findByUserIdAndWorkId(userId, dto.workId())
-                .orElseGet(Review::new);
-
-        review.setUser(user);
-        review.setWork(work);
-        applyDto(dto, review);
+                .map(existing -> {
+                    // Update existing review in place
+                    applyDto(dto, existing);
+                    return existing;
+                })
+                .orElseGet(() ->
+                        // Create a brand-new review using the factory
+                        Review.create(
+                                user,
+                                work,
+                                dto.rating(),
+                                dto.title(),
+                                dto.body(),
+                                dto.isPrivate()
+                        )
+                );
 
         Review saved = reviewRepository.save(review);
         return toDto(saved);
     }
 
+
     public void deleteReview(Long userId, Long reviewId) {
         Review review = reviewRepository.findById(reviewId)
                 .filter(r -> r.getUser().getId().equals(userId))
-                .orElseThrow(() -> new IllegalArgumentException("Review not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Review not found"
+                ));
+
         reviewRepository.delete(review);
     }
 
-    // ----- helpers -----
+    // ---------- helpers ----------
 
     private ReviewDto toDto(Review r) {
         return new ReviewDto(
@@ -97,6 +137,6 @@ public class ReviewService {
         r.setRating(dto.rating());
         r.setTitle(dto.title());
         r.setBody(dto.body());
-        r.setPrivateReview(dto.privateReview());
+        r.setPrivateReview(dto.isPrivate());
     }
 }

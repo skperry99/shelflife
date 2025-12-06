@@ -1,73 +1,66 @@
-// Normalize base URL (strip trailing slashes just in case)
-const API_BASE = (
-  import.meta.env.VITE_API_BASE || "http://localhost:8080"
-).replace(/\/+$/, "");
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8080";
 
-/**
- * Optionally attach an auth header.
- * Later you can swap this to read a real JWT or cookie.
- */
 function getAuthHeaders() {
-  const token = localStorage.getItem("shelflifeToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  let token = localStorage.getItem("shelflifeToken");
+
+  // DEV ONLY: default to demo user 1 if no token is present
+  if (!token) {
+    token = "demo-token-user-1";
+    localStorage.setItem("shelflifeToken", token);
+  }
+
+  return { Authorization: `Bearer ${token}` };
 }
 
-/**
- * Generic GET helper.
- * - Uses credentials: 'include' so cookies will work later.
- * - If options.ignore404 is true and we get a 404, returns null instead of throwing.
- */
-async function apiGet(path, { ignore404 = false } = {}) {
-  const url = `${API_BASE}${path}`;
+// Internal generic request helper
+async function apiRequest(method, path, body) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    credentials: "include", // safe even if you're not using cookies yet
+    body: body != null ? JSON.stringify(body) : undefined,
+  });
 
-  let res;
-  try {
-    res = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...getAuthHeaders(),
-      },
-      credentials: "include",
-    });
-  } catch (err) {
-    // Network-level error (server down, CORS issue, etc.)
-    throw new Error(
-      `Network error while calling ${url}: ${err?.message || String(err)}`
-    );
-  }
+  const text = await res.text().catch(() => "");
 
   if (!res.ok) {
-    if (ignore404 && res.status === 404) {
-      // e.g., no review yet
-      return null;
-    }
-
-    let message = `GET ${path} failed: ${res.status}`;
-    try {
-      const text = await res.text();
-      if (text) message += ` - ${text}`;
-    } catch {
-      // ignore body read failure
-    }
-    throw new Error(message);
+    // Include response text in the error for easier debugging
+    throw new Error(`${method} ${path} failed: ${res.status} ${text}`);
   }
 
-  // 204 No Content
-  if (res.status === 204) {
-    return null;
-  }
+  if (!text) return null;
 
-  const contentType = res.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) {
-    return res.json();
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Fallback if backend returns non-JSON text
+    return text;
   }
-
-  // Fallback in weird cases (non-JSON success)
-  return res.text();
 }
 
-// ---- Domain-specific helpers ----
+// Specific HTTP helpers
+async function apiGet(path) {
+  return apiRequest("GET", path);
+}
+
+async function apiPost(path, body) {
+  return apiRequest("POST", path, body);
+}
+
+async function apiPut(path, body) {
+  return apiRequest("PUT", path, body);
+}
+
+async function apiDelete(path) {
+  return apiRequest("DELETE", path);
+}
+
+/* =========================
+   Read helpers (GET)
+   ========================= */
 
 export function getAllWorks() {
   return apiGet("/api/works");
@@ -81,13 +74,99 @@ export function getWorkSessions(workId) {
   return apiGet(`/api/works/${workId}/sessions`);
 }
 
-// For reviews, a 404 should mean "no review yet", not blow up the page.
 export function getWorkReview(workId) {
-  return apiGet(`/api/works/${workId}/review`, { ignore404: true });
+  return apiGet(`/api/works/${workId}/review`);
 }
 
-// If you later add create/update/delete, you can build on this pattern:
-// async function apiPost(path, body) { ... }
-// async function apiPut(path, body) { ... }
-// async function apiDelete(path) { ... }
-export { apiGet };
+/* =========================
+   Write helpers (POST / PUT / DELETE)
+   Robust to camelCase / snake_case
+   ========================= */
+
+// Normalize a work object before sending to the API
+function toWorkApiPayload(raw) {
+  if (!raw) return {};
+
+  return {
+    // title + creator are always camelCase in the frontend,
+    // but we guard anyway in case you reuse backend DTOs in tests, etc.
+    title: raw.title ?? raw.workTitle ?? null,
+    creator: raw.creator ?? raw.author ?? null,
+
+    type: raw.type ?? raw.work_type ?? raw.workType ?? null,
+    genre: raw.genre ?? null,
+
+    status: raw.status ?? raw.work_status ?? raw.workStatus ?? null,
+
+    totalUnits: raw.totalUnits ?? raw.total_units ?? null,
+
+    coverUrl: raw.coverUrl ?? raw.cover_url ?? null,
+
+    startedAt: raw.startedAt ?? raw.started_at ?? null,
+    finishedAt: raw.finishedAt ?? raw.finished_at ?? null,
+  };
+}
+
+export function createWork(workInput) {
+  const payload = toWorkApiPayload(workInput);
+  return apiPost("/api/works", payload);
+}
+
+export function updateWork(workId, workInput) {
+  const payload = toWorkApiPayload(workInput);
+  return apiPut(`/api/works/${workId}`, payload);
+}
+
+export function deleteWork(workId) {
+  return apiDelete(`/api/works/${workId}`);
+}
+
+// Normalize a session object before sending to the API
+function toSessionApiPayload(raw) {
+  if (!raw) return {};
+
+  return {
+    startedAt: raw.startedAt ?? raw.started_at ?? null,
+    endedAt: raw.endedAt ?? raw.ended_at ?? null,
+    minutes: raw.minutes ?? null,
+    unitsCompleted: raw.unitsCompleted ?? raw.units_completed ?? null,
+    note: raw.note ?? null,
+  };
+}
+
+export function createSession(workId, sessionInput) {
+  const payload = toSessionApiPayload(sessionInput);
+  return apiPost(`/api/works/${workId}/sessions`, payload);
+}
+
+export function updateSession(sessionId, sessionInput) {
+  const payload = toSessionApiPayload(sessionInput);
+  return apiPut(`/api/sessions/${sessionId}`, payload);
+}
+
+export function deleteSession(sessionId) {
+  return apiDelete(`/api/sessions/${sessionId}`);
+}
+
+// Normalize a review object before sending to the API
+function toReviewApiPayload(raw) {
+  if (!raw) return {};
+
+  return {
+    rating: raw.rating ?? null,
+    title: raw.title ?? null,
+    body: raw.body ?? null,
+    isPrivate: raw.isPrivate ?? raw.is_private ?? false,
+  };
+}
+
+// Upsert-style review helper: frontend doesn’t care if backend
+// treats this as create vs update as long as contract is stable.
+export function upsertReview(workId, reviewInput) {
+  const payload = toReviewApiPayload(reviewInput);
+  return apiPost(`/api/works/${workId}/review`, payload);
+}
+
+export function deleteReview(reviewId) {
+  return apiDelete(`/api/reviews/${reviewId}`);
+}
