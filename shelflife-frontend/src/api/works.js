@@ -1,9 +1,15 @@
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8080";
 
 function getAuthHeaders() {
-  // TODO: plug in real auth token / cookie later
-  const token = localStorage.getItem("shelflifeToken");
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  let token = localStorage.getItem("shelflifeToken");
+
+  // DEV ONLY: default to demo user 1 if no token is present
+  if (!token) {
+    token = "demo-token-user-1";
+    localStorage.setItem("shelflifeToken", token);
+  }
+
+  return { Authorization: `Bearer ${token}` };
 }
 
 // Internal generic request helper
